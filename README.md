@@ -1,6 +1,6 @@
-# Getting Started with Create React App
+# Repository for learning chapter 7 - React Js
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This simple project with CRUD functionality, already integrated with backend application, with Goggle Oauth Feature & some basic react concept like routing, react hooks, props, ui framework using MUI, etc. 
 
 ## Available Scripts
 
