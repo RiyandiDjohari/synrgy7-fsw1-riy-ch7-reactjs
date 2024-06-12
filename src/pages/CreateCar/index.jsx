@@ -1,105 +1,98 @@
-import { Box, Button, Container, FormControl, Input, MenuItem, TextField, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Checkbox,
+  Container,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  Grid,
+  Input,
+  MenuItem,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers";
-import axios from "axios";
 import dayjs from "dayjs";
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { carOptions, carSpecs, typeCar } from "../../constant";
 import { useNavigate } from "react-router-dom";
+import { AppContext } from "../../context";
+import { useFormik } from "formik";
+import * as yup from "yup";
+
+const validationSchema = yup.object({
+  plate: yup
+    .string("Enter plate")
+    .min(4, "Plate should be of minimum 4 character length")
+    .required("Plate is required"),
+  manufacture: yup.string("Enter manufacture").min(2, "Too short").required("Manufacture is required"),
+});
 
 const CreateCar = () => {
+  const { createCar } = useContext(AppContext);
+
   const navigate = useNavigate();
-  const [option, setOption] = useState("");
-  const [availableAt, setAvailableAt] = useState(dayjs());
-  const [spec, setSpec] = useState("");
-  const [carData, setCarData] = useState({
-    plate: "",
-    manufacture: "",
-    model: "",
-    rentPerDay: "",
-    capacity: "",
-    description: "",
-    transmission: "",
-    available: "",
-    availableAt: dayjs().format("YYYY-MM-DD"),
-    type: "",
-    year: "",
-    options: [],
-    specs: [],
-  });
-  const [image, setImage] = useState(null);
+
   const [files, setFiles] = useState(null);
 
-  const handleChange = (e) => {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    setFiles(file);
+  const formik = useFormik({
+    initialValues: {
+      plate: "",
+      manufacture: "",
+      model: "",
+      rentPerDay: "",
+      capacity: "",
+      description: "",
+      transmission: "",
+      available: "",
+      type: "",
+      year: "",
+      availableAt: dayjs(),
+      options: [],
+      specs: [],
+      image: "",
+    },
+    validationSchema: validationSchema,
+    onSubmit: async (values) => {
+      const formattedDate = dayjs(values.availableAt).format("YYYY-MM-DD");
+      console.log({ ...values, availableAt: formattedDate });
 
-    reader.addEventListener("load", () => {
-      setImage(reader.result);
-    });
-
-    if (file) {
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setCarData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleAddOption = () => {
-    carData.options.push(option);
-    alert("Option Added");
-    setOption("");
-  };
-
-  const handleAddSpec = () => {
-    carData.specs.push(spec);
-    alert("Specs Added");
-    setSpec("");
-  };
-
-  const handleSubmit = async () => {
-    alert(files);
-    alert(image);
-
-    console.log(files);
-    console.log(carData);
-
-    const formData = new FormData();
-
-    formData.append("image", files);
-
-    for (const [key, value] of Object.entries(carData)) {
-      if (key === "options") {
-        carData.options.forEach((option) => {
-          formData.append("options[]", option);
-        });
-      } else if (key === "specs") {
-        carData.specs.forEach((spec) => {
-          formData.append("specs[]", spec);
-        });
-      } else {
-        formData.append(key, value);
+      const formData = new FormData();
+      for (const [key, value] of Object.entries({ ...values, availableAt: formattedDate, image: files })) {
+        if (key === "options") {
+          values.options.forEach((option) => {
+            formData.append("options[]", option);
+          });
+        } else if (key === "specs") {
+          values.specs.forEach((spec) => {
+            formData.append("specs[]", spec);
+          });
+        } else {
+          formData.append(key, value);
+        }
       }
-    }
 
-    const response = await axios.post("http://localhost:8000/api/v1/cars", formData, {
-      headers: {
-        "Content-type": "multipart/form-data",
-      },
-    });
+      const data = await createCar(formData);
 
-    const data = await response.data;
+      if (data.status === true) {
+        alert("Create car success");
+        formik.resetForm();
+      } else {
+        alert("Failed to create car");
+      }
+    },
+  });
 
-    if (data.status === true) {
-      alert("Create car success");
-    } else {
-      alert("Failed to create car");
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.addEventListener("load", () => {
+        formik.setFieldValue("image", reader.result);
+      });
+      setFiles(file);
     }
   };
 
@@ -111,177 +104,182 @@ const CreateCar = () => {
           Back
         </Button>
       </div>
-      <FormControl method="POST" component="form">
-        <TextField
-          label="Plate"
-          margin="dense"
-          name="plate"
-          value={carData.plate}
-          onChange={handleInputChange}
-          type="text"
-          placeholder="DHL-3491"
-        />
+      <form onSubmit={formik.handleSubmit}>
+        <FormControl>
+          <TextField
+            label="Plate"
+            margin="dense"
+            name="plate"
+            type="text"
+            placeholder="DHL-3491"
+            value={formik.values.plate}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.plate && Boolean(formik.errors.plate)}
+            helperText={formik.touched.plate && formik.errors.plate}
+          />
 
-        <TextField
-          label="Manufacture"
-          margin="dense"
-          name="manufacture"
-          value={carData.manufacture}
-          onChange={handleInputChange}
-          type="text"
-          placeholder="Ford"
-        />
+          <TextField
+            label="Manufacture"
+            margin="dense"
+            name="manufacture"
+            type="text"
+            placeholder="Ford"
+            value={formik.values.manufacture}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.manufacture && Boolean(formik.errors.manufacture)}
+            helperText={formik.touched.manufacture && formik.errors.manufacture}
+          />
 
-        <TextField
-          label="Model"
-          margin="dense"
-          name="model"
-          value={carData.model}
-          onChange={handleInputChange}
-          type="text"
-          placeholder="ABC"
-        />
+          <TextField
+            label="Model"
+            margin="dense"
+            name="model"
+            type="text"
+            placeholder="ABC"
+            value={formik.values.model}
+            onChange={formik.handleChange}
+          />
 
-        <TextField
-          label="Rent Per Day"
-          margin="dense"
-          name="rentPerDay"
-          value={carData.rentPerDay}
-          onChange={handleInputChange}
-          type="number"
-          placeholder="100000"
-        />
+          <TextField
+            label="Rent Per Day"
+            margin="dense"
+            name="rentPerDay"
+            type="number"
+            placeholder="100000"
+            value={formik.values.rentPerDay}
+            onChange={formik.handleChange}
+          />
 
-        <TextField
-          label="Capacity"
-          margin="dense"
-          name="capacity"
-          value={carData.capacity}
-          onChange={handleInputChange}
-          type="number"
-          placeholder="4"
-        />
+          <TextField
+            label="Capacity"
+            margin="dense"
+            name="capacity"
+            type="number"
+            placeholder="4"
+            value={formik.values.capacity}
+            onChange={formik.handleChange}
+          />
 
-        <TextField
-          label="Description"
-          margin="dense"
-          name="description"
-          value={carData.description}
-          onChange={handleInputChange}
-          type="text"
-          placeholder="Lorem ipsum sit dolor amet"
-          multiline
-          rows={3}
-        />
+          <TextField
+            label="Description"
+            margin="dense"
+            name="description"
+            type="text"
+            placeholder="Lorem ipsum sit dolor amet"
+            multiline
+            rows={3}
+            value={formik.values.description}
+            onChange={formik.handleChange}
+          />
 
-        <TextField
-          label="Available"
-          margin="dense"
-          name="available"
-          value={carData.available}
-          onChange={handleInputChange}
-          select
-        >
-          <MenuItem value={true}>True</MenuItem>
-          <MenuItem value={false}>False</MenuItem>
-        </TextField>
+          <TextField
+            label="Available"
+            margin="dense"
+            name="available"
+            select
+            value={formik.values.available}
+            onChange={formik.handleChange}
+          >
+            <MenuItem value={true}>True</MenuItem>
+            <MenuItem value={false}>False</MenuItem>
+          </TextField>
 
-        <DatePicker
-          label="Available At"
-          id="availableAt"
-          name="availableAt"
-          sx={{ my: "0.5rem" }}
-          format="DD/MM/YYYY"
-          value={availableAt}
-          onChange={(newValue) => {
-            setAvailableAt(newValue);
-            setCarData((prev) => ({
-              ...prev,
-              availableAt: newValue.format("YYYY-MM-DD"),
-            }));
-          }}
-        />
+          <DatePicker
+            label="Available At"
+            id="availableAt"
+            name="availableAt"
+            sx={{ my: "0.5rem" }}
+            format="DD/MM/YYYY"
+            value={formik.values.availableAt}
+            onChange={(newValue) => formik.setFieldValue("availableAt", newValue)}
+          />
 
-        <TextField
-          label="Transmission"
-          margin="dense"
-          name="transmission"
-          value={carData.transmission}
-          onChange={handleInputChange}
-          select
-        >
-          <MenuItem value="Automatic">Automatic</MenuItem>
-          <MenuItem value="Manual">Manual</MenuItem>
-          <MenuItem value="Automanual">Automanual</MenuItem>
-          <MenuItem value="CVT">CVT</MenuItem>
-        </TextField>
+          <TextField
+            label="Transmission"
+            margin="dense"
+            name="transmission"
+            select
+            value={formik.values.transmission}
+            onChange={formik.handleChange}
+          >
+            <MenuItem value="Automatic">Automatic</MenuItem>
+            <MenuItem value="Manual">Manual</MenuItem>
+            <MenuItem value="Automanual">Automanual</MenuItem>
+            <MenuItem value="CVT">CVT</MenuItem>
+          </TextField>
 
-        <TextField label="Type" margin="dense" name="type" value={carData.type} onChange={handleInputChange} select>
-          {typeCar.map((item, i) => (
-            <MenuItem value={item} key={i}>
-              {item}
-            </MenuItem>
-          ))}
-        </TextField>
+          <TextField
+            label="Type"
+            margin="dense"
+            name="type"
+            select
+            value={formik.values.type}
+            onChange={formik.handleChange}
+          >
+            {typeCar.map((item, i) => (
+              <MenuItem value={item} key={i}>
+                {item}
+              </MenuItem>
+            ))}
+          </TextField>
 
-        <TextField
-          label="Year"
-          margin="dense"
-          name="year"
-          value={carData.year}
-          onChange={handleInputChange}
-          type="number"
-          placeholder="2024"
-        />
+          <TextField
+            label="Year"
+            margin="dense"
+            name="year"
+            type="number"
+            placeholder="2024"
+            value={formik.values.year}
+            onChange={formik.handleChange}
+          />
 
-        <TextField
-          label="Options"
-          margin="dense"
-          name="type"
-          value={option}
-          onChange={(e) => setOption(e.target.value)}
-          select
-        >
-          {carOptions.map((item, i) => (
-            <MenuItem value={item} key={i}>
-              {item}
-            </MenuItem>
-          ))}
-        </TextField>
-        <Button variant="contained" onClick={() => handleAddOption()}>
-          Select Option
-        </Button>
+          <FormControl margin="normal">
+            <FormLabel component="legend">Car Options</FormLabel>
+            <Grid container spacing={1}>
+              {carOptions.map((item, i) => (
+                <Grid item xs={2} key={i}>
+                  <FormControlLabel
+                    key={i}
+                    control={<Checkbox onChange={formik.handleChange} value={item} />}
+                    label={item}
+                    name="options"
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          </FormControl>
 
-        <TextField
-          label="Specs"
-          margin="dense"
-          name="specs"
-          value={spec}
-          onChange={(e) => setSpec(e.target.value)}
-          select
-        >
-          {carSpecs.map((item, i) => (
-            <MenuItem value={item} key={i}>
-              {item}
-            </MenuItem>
-          ))}
-        </TextField>
-        <Button variant="contained" onClick={() => handleAddSpec()}>
-          Select Spec
-        </Button>
+          <FormControl margin="normal">
+            <FormLabel component="legend">Car Specs</FormLabel>
+            <Grid container spacing={1}>
+              {carSpecs.map((item, i) => (
+                <Grid item xs={3} key={i}>
+                  <FormControlLabel
+                    key={i}
+                    control={<Checkbox onChange={formik.handleChange} value={item} />}
+                    label={item}
+                    name="specs"
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          </FormControl>
 
-        <Box sx={{ my: "1rem" }}>
-          <Input type="file" onChange={(e) => handleChange(e)} />
-          <Button variant="contained" onClick={() => setImage(null)}>
-            Clear image
+          <Box sx={{ my: "1rem" }}>
+            <Input type="file" onChange={(e) => handleImageChange(e)} />
+            <Button variant="contained" onClick={() => formik.setFieldValue("image", "")}>
+              Clear image
+            </Button>
+            {formik.values.image && <img src={formik.values.image} alt="preview" width={200} />}
+          </Box>
+
+          <Button variant="contained" color="primary" type="submit">
+            Create
           </Button>
-          {image && <img src={image} alt="preview" width={200} />}
-        </Box>
-
-        <Button variant="contained" color="primary" onClick={handleSubmit}>
-          Create
-        </Button>
-      </FormControl>
+        </FormControl>
+      </form>
     </Container>
   );
 };

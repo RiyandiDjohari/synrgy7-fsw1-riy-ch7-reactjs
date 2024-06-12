@@ -8,28 +8,31 @@ import CreateCar from "./pages/CreateCar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import UpdateCar from "./pages/UpdateCar";
+import AppProvider from "./context";
 
 function App() {
   return (
-    <Routes>
-      <Route
-        path="/*"
-        element={
-          <ProtectedRoute>
-            <Routes>
-              <Route path="/" element={<Homepage />}/>
-              <Route path="/about" element={<About />} />
-              <Route path="/cars/:id" element={<DetailCar />} />
-              <Route path="/cars" element={<Cars />} />
-              <Route path="/create-car" element={<CreateCar />} />
-              <Route path="/update-car/:id" element={<UpdateCar />} />
-            </Routes>
-          </ProtectedRoute>
-        }
-      />
+    <AppProvider>
+      <Routes>
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <Routes>
+                <Route path="/" element={<Homepage />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/cars/:id" element={<DetailCar />} />
+                <Route path="/cars" element={<Cars />} />
+                <Route path="/create-car" element={<CreateCar />} />
+                <Route path="/update-car/:id" element={<UpdateCar />} />
+              </Routes>
+            </ProtectedRoute>
+          }
+        />
 
-      <Route path="/login" element={<Login />} />
-    </Routes>
+        <Route path="/login" element={<Login />} />
+      </Routes>
+    </AppProvider>
   );
 }
 

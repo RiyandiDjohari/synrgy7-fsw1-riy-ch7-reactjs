@@ -1,17 +1,17 @@
-import React from "react";
-import { useEffect, useState } from "react";
+import React, { useContext } from "react";
+import { useState } from "react";
 import ProductList from "../../components/ProductList";
-import TodoList from "../../components/TodoList";
 import { products, menus } from "../../constant";
-import { Box, Button, Container } from "@mui/material";
+import { Box, Button, Container, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SearchMenu from "../../components/SearchMenu";
 import Result from "../../components/Result";
 import { googleLogout } from "@react-oauth/google";
+import { AppContext } from "../../context";
 
 const Homepage = () => {
+  const { sampleValue } = useContext(AppContext);
   const [value, setValue] = useState("");
-  const [todos, setTodos] = useState(null);
   const [listProducts, setListProducts] = useState(products);
 
   const navigate = useNavigate();
@@ -30,20 +30,6 @@ const Homepage = () => {
     listProducts.push(value);
   };
 
-  const fetchTodos = async () => {
-    try {
-      const response = await fetch("https://jsonplaceholder.typicode.com/todos");
-      const data = await response.json();
-      setTodos(data);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  useEffect(() => {
-    fetchTodos();
-  }, []);
-
   const handleLogout = () => {
     googleLogout();
     localStorage.removeItem("token");
@@ -56,6 +42,7 @@ const Homepage = () => {
         <Button variant="contained" onClick={handleLogout} sx={{height: "fit-content"}}>
           Logout
         </Button>
+        <Typography>{sampleValue}</Typography>
       </Box>
       <Result value={value} menus={menus} />
       <ProductList
@@ -63,7 +50,6 @@ const Homepage = () => {
         products={listProducts}
         handleAddProduct={handleAddProduct}
       />
-      <TodoList todos={todos} />
     </Container>
   );
 };
